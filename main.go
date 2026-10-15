@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+	// Load environment variables
 	if err := godotenv.Load(); err != nil {
 		log.Println("Warning: .env file not found")
 	}
@@ -24,21 +25,26 @@ func main() {
 
 	log.Println("PostgreSQL connected successfully!")
 
-	// Create database tables from models
-	if err := db.AutoMigrate(&models.User{}); err != nil {
+	// Create or update database tables
+	if err := db.AutoMigrate(
+		&models.User{},
+		&models.Vehicle{},
+	); err != nil {
 		log.Fatal("Database migration failed: ", err)
 	}
 
-	log.Println("User table created successfully!")
+	log.Println("Database tables migrated successfully!")
 
-	// Set up routes
+	// Set up API routes
 	router := routes.SetupRoutes()
 
+	// Get application port
 	port := os.Getenv("APP_PORT")
 	if port == "" {
 		port = "8080"
 	}
 
+	// Start server
 	log.Printf("SaarthiGo server starting on port %s", port)
 
 	if err := router.Run(":" + port); err != nil {

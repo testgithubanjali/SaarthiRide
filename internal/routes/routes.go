@@ -27,5 +27,21 @@ func SetupRoutes() *gin.Engine {
 		middleware.AuthRequired(),
 		handlers.UpdateProfile,
 	)
+
+	api.POST(
+		"/vehicles",
+		middleware.AuthRequired(),
+		handlers.CreateVehicle,
+	)
+	api.GET(
+		"/vehicles",
+		middleware.AuthRequired(),
+		handlers.GetMyVehicles,
+	)
+	api.PATCH(
+		"/vehicles/:id/availability",
+		middleware.AuthRequired(),
+		handlers.UpdateVehicleAvailability,
+	)
 	return router
 }
