@@ -12,6 +12,7 @@ func SetupRoutes() *gin.Engine {
 	api := router.Group("/api")
 	{
 		api.GET("/health", handlers.HealthCheck)
+		api.POST("/register", handlers.Register)
 	}
 
 	return router
