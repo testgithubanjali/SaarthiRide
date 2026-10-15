@@ -22,5 +22,10 @@ func SetupRoutes() *gin.Engine {
 		middleware.AuthRequired(),
 		handlers.GetProfile,
 	)
+	api.PUT(
+		"/profile",
+		middleware.AuthRequired(),
+		handlers.UpdateProfile,
+	)
 	return router
 }
