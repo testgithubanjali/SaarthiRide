@@ -34,6 +34,16 @@ func main() {
 		log.Fatal("Database migration failed: ", err)
 	}
 
+	// Prevent a vehicle from being assigned to multiple active rides.
+	if err := db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_rides_unique_active_vehicle
+		ON public.rides (vehicle_id)
+		WHERE vehicle_id IS NOT NULL
+		  AND status IN ('accepted', 'in_progress');
+	`).Error; err != nil {
+		log.Fatal("Failed to create active vehicle assignment index: ", err)
+	}
+
 	log.Println("Database tables migrated successfully!")
 
 	// Set up API routes
