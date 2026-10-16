@@ -43,5 +43,11 @@ func SetupRoutes() *gin.Engine {
 		middleware.AuthRequired(),
 		handlers.UpdateVehicleAvailability,
 	)
+	api.PATCH(
+		"/vehicles/:id/location",
+		middleware.AuthRequired(),
+		handlers.UpdateDriverLocation,
+	)
+	api.GET("/vehicles/nearby", handlers.GetNearbyVehicles)
 	return router
 }
