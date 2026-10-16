@@ -1,0 +1,761 @@
+basePath: /api
+definitions:
+  handlers.CreateRideRequest:
+    properties:
+      destination_latitude:
+        type: number
+      destination_longitude:
+        type: number
+      pickup_latitude:
+        type: number
+      pickup_longitude:
+        type: number
+    required:
+    - destination_latitude
+    - destination_longitude
+    - pickup_latitude
+    - pickup_longitude
+    type: object
+  handlers.CreateVehicleRequest:
+    properties:
+      capacity:
+        maximum: 10
+        minimum: 1
+        type: integer
+      model:
+        type: string
+      registration_number:
+        type: string
+    required:
+    - capacity
+    - model
+    - registration_number
+    type: object
+  handlers.LoginRequest:
+    properties:
+      password:
+        type: string
+      phone:
+        type: string
+    required:
+    - password
+    - phone
+    type: object
+  handlers.RegisterRequest:
+    properties:
+      name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      phone:
+        type: string
+      role:
+        type: string
+    required:
+    - name
+    - password
+    - phone
+    - role
+    type: object
+  handlers.UpdateAvailabilityRequest:
+    properties:
+      is_available:
+        type: boolean
+    required:
+    - is_available
+    type: object
+  handlers.UpdateLocationRequest:
+    properties:
+      latitude:
+        type: number
+      longitude:
+        type: number
+    required:
+    - latitude
+    - longitude
+    type: object
+  handlers.UpdateProfileRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: REST API for the SaarthiRide ride-booking application.
+  title: SaarthiRide API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      description: Checks whether the SaarthiGo backend API is running.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: API is running successfully
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Check API health
+      tags:
+      - Health
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a registered user and returns a JWT token valid for
+        24 hours.
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful with JWT token
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Phone and password are required
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Invalid phone number or password
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Database or authentication configuration error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Log in a user
+      tags:
+      - Authentication
+  /profile:
+    get:
+      description: Returns the profile of the currently authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Database or profile retrieval error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user profile
+      tags:
+      - Profile
+    put:
+      consumes:
+      - application/json
+      description: Updates the name of the currently authenticated user.
+      parameters:
+      - description: Profile update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Name is required or cannot be empty
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Database or profile update error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user profile
+      tags:
+      - Profile
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a passenger or driver account. Password must contain at
+        least 8 characters.
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Registration successful
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid input or role
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Phone number may already be registered
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new user
+      tags:
+      - Authentication
+  /rides:
+    post:
+      consumes:
+      - application/json
+      description: Creates a ride request for the authenticated passenger.
+      parameters:
+      - description: Pickup and destination coordinates
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateRideRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Ride requested successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid coordinates or request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Only passengers can request rides
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Database error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Request a ride
+      tags:
+      - Rides
+  /rides/{id}/accept:
+    patch:
+      description: Accepts a pending ride and assigns an available vehicle to the
+        driver.
+      parameters:
+      - description: Ride ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ride accepted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ride ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Only drivers can accept rides
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ride not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Ride or vehicle is unavailable
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Could not accept ride
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Accept a ride
+      tags:
+      - Rides
+  /rides/{id}/cancel:
+    patch:
+      description: Cancels an eligible ride owned by the passenger or assigned to
+        the driver.
+      parameters:
+      - description: Ride ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ride cancelled successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ride ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: User is not authorized to cancel this ride
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ride not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Ride can no longer be cancelled
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Could not cancel ride
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancel a ride
+      tags:
+      - Rides
+  /rides/{id}/complete:
+    patch:
+      description: Completes an in-progress ride assigned to the authenticated driver
+        and releases its vehicle.
+      parameters:
+      - description: Ride ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ride completed successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ride ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Driver is not assigned to the ride
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ride not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Ride cannot be completed
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Could not complete ride
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Complete a ride
+      tags:
+      - Rides
+  /rides/{id}/start:
+    patch:
+      description: Starts an accepted ride assigned to the authenticated driver.
+      parameters:
+      - description: Ride ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ride started successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ride ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Only drivers can start rides
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Ride cannot be started
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Could not start ride
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Start a ride
+      tags:
+      - Rides
+  /rides/history:
+    get:
+      description: Returns rides belonging to the authenticated passenger or driver.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ride history retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Account role cannot access ride history
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Could not retrieve ride history
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get ride history
+      tags:
+      - Rides
+  /rides/pending:
+    get:
+      description: Returns pending rides for authenticated drivers.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Pending rides retrieved
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Only drivers can view pending rides
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Could not retrieve rides
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get pending ride requests
+      tags:
+      - Rides
+  /vehicles:
+    get:
+      description: Returns vehicles registered by the authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Vehicles retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Could not retrieve vehicles
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get my vehicles
+      tags:
+      - Vehicles
+    post:
+      consumes:
+      - application/json
+      description: Registers a vehicle for the authenticated driver.
+      parameters:
+      - description: Vehicle details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateVehicleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Vehicle registered successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid vehicle details
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Only drivers can register vehicles
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Registration number may already exist
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Database error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Register a vehicle
+      tags:
+      - Vehicles
+  /vehicles/{id}/availability:
+    patch:
+      consumes:
+      - application/json
+      description: Updates the availability status of a vehicle registered by the
+        authenticated driver.
+      parameters:
+      - description: Vehicle ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Availability update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateAvailabilityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Vehicle availability updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid availability status
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Vehicle not found for this driver
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Could not update vehicle availability
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update vehicle availability
+      tags:
+      - Vehicles
+  /vehicles/{id}/location:
+    patch:
+      consumes:
+      - application/json
+      description: Updates the location of an available vehicle belonging to the authenticated
+        driver.
+      parameters:
+      - description: Vehicle ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Current vehicle coordinates
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateLocationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Vehicle location updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid latitude or longitude
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Authentication required
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Vehicle not found for this driver
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Vehicle must be available before sharing location
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Database error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update driver location
+      tags:
+      - Vehicles
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

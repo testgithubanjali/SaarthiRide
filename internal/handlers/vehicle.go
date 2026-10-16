@@ -17,6 +17,21 @@ type CreateVehicleRequest struct {
 	Capacity           int    `json:"capacity" binding:"required,min=1,max=10"`
 }
 
+// CreateVehicle godoc
+// @Summary      Register a vehicle
+// @Description  Registers a vehicle for the authenticated driver.
+// @Tags         Vehicles
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        request body CreateVehicleRequest true "Vehicle details"
+// @Success      201 {object} map[string]interface{} "Vehicle registered successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid vehicle details"
+// @Failure      401 {object} map[string]interface{} "Authentication required"
+// @Failure      403 {object} map[string]interface{} "Only drivers can register vehicles"
+// @Failure      409 {object} map[string]interface{} "Registration number may already exist"
+// @Failure      500 {object} map[string]interface{} "Database error"
+// @Router       /vehicles [post]
 func CreateVehicle(c *gin.Context) {
 	userIDValue, exists := c.Get("userID")
 	if !exists {
@@ -114,6 +129,16 @@ func CreateVehicle(c *gin.Context) {
 	})
 }
 
+// GetMyVehicles godoc
+// @Summary      Get my vehicles
+// @Description  Returns vehicles registered by the authenticated user.
+// @Tags         Vehicles
+// @Security     BearerAuth
+// @Produce      json
+// @Success      200 {object} map[string]interface{} "Vehicles retrieved successfully"
+// @Failure      401 {object} map[string]interface{} "Authentication required"
+// @Failure      500 {object} map[string]interface{} "Could not retrieve vehicles"
+// @Router       /vehicles [get]
 func GetMyVehicles(c *gin.Context) {
 	userIDValue, exists := c.Get("userID")
 	if !exists {
@@ -163,6 +188,21 @@ type UpdateAvailabilityRequest struct {
 	IsAvailable *bool `json:"is_available" binding:"required"`
 }
 
+// UpdateVehicleAvailability godoc
+// @Summary      Update vehicle availability
+// @Description  Updates the availability status of a vehicle registered by the authenticated driver.
+// @Tags         Vehicles
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "Vehicle ID"
+// @Param        request body UpdateAvailabilityRequest true "Availability update details"
+// @Success      200 {object} map[string]interface{} "Vehicle availability updated successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid availability status"
+// @Failure      401 {object} map[string]interface{} "Authentication required"
+// @Failure      404 {object} map[string]interface{} "Vehicle not found for this driver"
+// @Failure      500 {object} map[string]interface{} "Could not update vehicle availability"
+// @Router       /vehicles/{id}/availability [patch]
 func UpdateVehicleAvailability(c *gin.Context) {
 	userIDValue, exists := c.Get("userID")
 	if !exists {

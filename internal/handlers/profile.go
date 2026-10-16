@@ -3,13 +3,24 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
-
 	"SaarthiRide/internal/config"
 	"SaarthiRide/internal/models"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
+// GetProfile godoc
+// @Summary      Get user profile
+// @Description  Returns the profile of the currently authenticated user.
+// @Tags         Profile
+// @Security     BearerAuth
+// @Produce      json
+// @Success      200 {object} map[string]interface{} "Profile retrieved successfully"
+// @Failure      401 {object} map[string]interface{} "Authentication required"
+// @Failure      404 {object} map[string]interface{} "User not found"
+// @Failure      500 {object} map[string]interface{} "Database or profile retrieval error"
+// @Router       /profile [get]
 func GetProfile(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {

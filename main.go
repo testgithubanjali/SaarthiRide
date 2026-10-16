@@ -11,6 +11,15 @@ import (
 	"SaarthiRide/internal/routes"
 )
 
+// @title SaarthiRide API
+// @version 1.0
+// @description REST API for the SaarthiRide ride-booking application.
+// @host localhost:8080
+// @BasePath /api
+// @schemes http
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {

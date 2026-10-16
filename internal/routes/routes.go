@@ -1,14 +1,25 @@
 package routes
 
 import (
+	"SaarthiRide/docs"
 	"SaarthiRide/internal/handlers"
 	"SaarthiRide/internal/middleware"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func SetupRoutes() *gin.Engine {
 	router := gin.Default()
+
+	// Swagger UI
+	docs.SwaggerInfo.BasePath = "/api"
+
+	router.GET(
+		"/swagger/*any",
+		ginSwagger.WrapHandler(swaggerFiles.Handler),
+	)
 
 	api := router.Group("/api")
 	{
@@ -39,23 +50,13 @@ func SetupRoutes() *gin.Engine {
 		api.GET("/rides/pending", middleware.AuthRequired(), handlers.GetPendingRides)
 		api.PATCH("/rides/:id/accept", middleware.AuthRequired(), handlers.AcceptRide)
 
-		// Start an accepted ride
+		// Start and complete rides
 		api.PATCH("/rides/:id/start", middleware.AuthRequired(), handlers.StartRide)
-		api.PATCH(
-			"/rides/:id/complete",
-			middleware.AuthRequired(),
-			handlers.CompleteRide,
-		)
-		api.GET(
-			"/rides/history",
-			middleware.AuthRequired(),
-			handlers.GetRideHistory,
-		)
-		api.PATCH(
-			"/rides/:id/cancel",
-			middleware.AuthRequired(),
-			handlers.CancelRide,
-		)
+		api.PATCH("/rides/:id/complete", middleware.AuthRequired(), handlers.CompleteRide)
+
+		// Ride history and cancellation
+		api.GET("/rides/history", middleware.AuthRequired(), handlers.GetRideHistory)
+		api.PATCH("/rides/:id/cancel", middleware.AuthRequired(), handlers.CancelRide)
 	}
 
 	return router

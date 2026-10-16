@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"SaarthiRide/internal/config"
+	"SaarthiRide/internal/models"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
-
-	"SaarthiRide/internal/config"
-	"SaarthiRide/internal/models"
 )
 
 type RegisterRequest struct {
@@ -22,6 +22,18 @@ type RegisterRequest struct {
 	Role     string `json:"role" binding:"required"`
 }
 
+// Register godoc
+// @Summary      Register a new user
+// @Description  Creates a passenger or driver account. Password must contain at least 8 characters.
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        request body RegisterRequest true "Registration details"
+// @Success      201 {object} map[string]interface{} "Registration successful"
+// @Failure      400 {object} map[string]interface{} "Invalid input or role"
+// @Failure      409 {object} map[string]interface{} "Phone number may already be registered"
+// @Failure      500 {object} map[string]interface{} "Internal server error"
+// @Router       /register [post]
 func Register(c *gin.Context) {
 	var req RegisterRequest
 
@@ -106,6 +118,18 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// Login godoc
+// @Summary      Log in a user
+// @Description  Authenticates a registered user and returns a JWT token valid for 24 hours.
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        request body LoginRequest true "Login credentials"
+// @Success      200 {object} map[string]interface{} "Login successful with JWT token"
+// @Failure      400 {object} map[string]interface{} "Phone and password are required"
+// @Failure      401 {object} map[string]interface{} "Invalid phone number or password"
+// @Failure      500 {object} map[string]interface{} "Database or authentication configuration error"
+// @Router       /login [post]
 func Login(c *gin.Context) {
 	var req LoginRequest
 

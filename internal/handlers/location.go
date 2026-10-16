@@ -15,6 +15,22 @@ type UpdateLocationRequest struct {
 	Longitude *float64 `json:"longitude" binding:"required"`
 }
 
+// UpdateDriverLocation godoc
+// @Summary      Update driver location
+// @Description  Updates the location of an available vehicle belonging to the authenticated driver.
+// @Tags         Vehicles
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Vehicle ID"
+// @Param        request body UpdateLocationRequest true "Current vehicle coordinates"
+// @Success      200 {object} map[string]interface{} "Vehicle location updated successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid latitude or longitude"
+// @Failure      401 {object} map[string]interface{} "Authentication required"
+// @Failure      404 {object} map[string]interface{} "Vehicle not found for this driver"
+// @Failure      409 {object} map[string]interface{} "Vehicle must be available before sharing location"
+// @Failure      500 {object} map[string]interface{} "Database error"
+// @Router       /vehicles/{id}/location [patch]
 func UpdateDriverLocation(c *gin.Context) {
 	userIDValue, exists := c.Get("userID")
 	if !exists {

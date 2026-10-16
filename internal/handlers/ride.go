@@ -34,6 +34,21 @@ func validLongitude(value float64) bool {
 }
 
 // CreateRide allows authenticated passengers to request a ride.
+//
+// CreateRide godoc
+// @Summary      Request a ride
+// @Description  Creates a ride request for the authenticated passenger.
+// @Tags         Rides
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        request body CreateRideRequest true "Pickup and destination coordinates"
+// @Success      201 {object} map[string]interface{} "Ride requested successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid coordinates or request"
+// @Failure      401 {object} map[string]interface{} "Authentication required"
+// @Failure      403 {object} map[string]interface{} "Only passengers can request rides"
+// @Failure      500 {object} map[string]interface{} "Database error"
+// @Router       /rides [post]
 func CreateRide(c *gin.Context) {
 	userIDValue, exists := c.Get("userID")
 	if !exists {
@@ -124,6 +139,18 @@ func CreateRide(c *gin.Context) {
 }
 
 // GetPendingRides allows authenticated drivers to view pending ride requests.
+//
+// GetPendingRides godoc
+// @Summary      Get pending ride requests
+// @Description  Returns pending rides for authenticated drivers.
+// @Tags         Rides
+// @Security     BearerAuth
+// @Produce      json
+// @Success      200 {object} map[string]interface{} "Pending rides retrieved"
+// @Failure      401 {object} map[string]interface{} "Authentication required"
+// @Failure      403 {object} map[string]interface{} "Only drivers can view pending rides"
+// @Failure      500 {object} map[string]interface{} "Could not retrieve rides"
+// @Router       /rides/pending [get]
 func GetPendingRides(c *gin.Context) {
 	userIDValue, exists := c.Get("userID")
 	if !exists {
@@ -189,7 +216,22 @@ func GetPendingRides(c *gin.Context) {
 
 // AcceptRide assigns an available vehicle and driver to a pending ride.
 // Both changes happen in one transaction.
-
+//
+// AcceptRide godoc
+// @Summary      Accept a ride
+// @Description  Accepts a pending ride and assigns an available vehicle to the driver.
+// @Tags         Rides
+// @Security     BearerAuth
+// @Produce      json
+// @Param        id path int true "Ride ID"
+// @Success      200 {object} map[string]interface{} "Ride accepted successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid ride ID"
+// @Failure      401 {object} map[string]interface{} "Authentication required"
+// @Failure      403 {object} map[string]interface{} "Only drivers can accept rides"
+// @Failure      404 {object} map[string]interface{} "Ride not found"
+// @Failure      409 {object} map[string]interface{} "Ride or vehicle is unavailable"
+// @Failure      500 {object} map[string]interface{} "Could not accept ride"
+// @Router       /rides/{id}/accept [patch]
 func AcceptRide(c *gin.Context) {
 	userIDValue, exists := c.Get("userID")
 	if !exists {
@@ -353,6 +395,21 @@ func AcceptRide(c *gin.Context) {
 }
 
 // StartRide allows the assigned driver to start an accepted ride.
+//
+// StartRide godoc
+// @Summary      Start a ride
+// @Description  Starts an accepted ride assigned to the authenticated driver.
+// @Tags         Rides
+// @Security     BearerAuth
+// @Produce      json
+// @Param        id path int true "Ride ID"
+// @Success      200 {object} map[string]interface{} "Ride started successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid ride ID"
+// @Failure      401 {object} map[string]interface{} "Authentication required"
+// @Failure      403 {object} map[string]interface{} "Only drivers can start rides"
+// @Failure      409 {object} map[string]interface{} "Ride cannot be started"
+// @Failure      500 {object} map[string]interface{} "Could not start ride"
+// @Router       /rides/{id}/start [patch]
 func StartRide(c *gin.Context) {
 	userIDValue, exists := c.Get("userID")
 	if !exists {
@@ -441,6 +498,21 @@ func StartRide(c *gin.Context) {
 	})
 }
 
+// CompleteRide godoc
+// @Summary      Complete a ride
+// @Description  Completes an in-progress ride assigned to the authenticated driver and releases its vehicle.
+// @Tags         Rides
+// @Security     BearerAuth
+// @Produce      json
+// @Param        id path int true "Ride ID"
+// @Success      200 {object} map[string]interface{} "Ride completed successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid ride ID"
+// @Failure      401 {object} map[string]interface{} "Authentication required"
+// @Failure      403 {object} map[string]interface{} "Driver is not assigned to the ride"
+// @Failure      404 {object} map[string]interface{} "Ride not found"
+// @Failure      409 {object} map[string]interface{} "Ride cannot be completed"
+// @Failure      500 {object} map[string]interface{} "Could not complete ride"
+// @Router       /rides/{id}/complete [patch]
 func CompleteRide(c *gin.Context) {
 	userIDValue, exists := c.Get("userID")
 	if !exists {
@@ -570,6 +642,17 @@ func CompleteRide(c *gin.Context) {
 	})
 }
 
+// GetRideHistory godoc
+// @Summary      Get ride history
+// @Description  Returns rides belonging to the authenticated passenger or driver.
+// @Tags         Rides
+// @Security     BearerAuth
+// @Produce      json
+// @Success      200 {object} map[string]interface{} "Ride history retrieved successfully"
+// @Failure      401 {object} map[string]interface{} "Authentication required"
+// @Failure      403 {object} map[string]interface{} "Account role cannot access ride history"
+// @Failure      500 {object} map[string]interface{} "Could not retrieve ride history"
+// @Router       /rides/history [get]
 func GetRideHistory(c *gin.Context) {
 	userIDValue, exists := c.Get("userID")
 	if !exists {
@@ -638,6 +721,21 @@ func GetRideHistory(c *gin.Context) {
 	})
 }
 
+// CancelRide godoc
+// @Summary      Cancel a ride
+// @Description  Cancels an eligible ride owned by the passenger or assigned to the driver.
+// @Tags         Rides
+// @Security     BearerAuth
+// @Produce      json
+// @Param        id path int true "Ride ID"
+// @Success      200 {object} map[string]interface{} "Ride cancelled successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid ride ID"
+// @Failure      401 {object} map[string]interface{} "Authentication required"
+// @Failure      403 {object} map[string]interface{} "User is not authorized to cancel this ride"
+// @Failure      404 {object} map[string]interface{} "Ride not found"
+// @Failure      409 {object} map[string]interface{} "Ride can no longer be cancelled"
+// @Failure      500 {object} map[string]interface{} "Could not cancel ride"
+// @Router       /rides/{id}/cancel [patch]
 func CancelRide(c *gin.Context) {
 	userIDValue, exists := c.Get("userID")
 	if !exists {
