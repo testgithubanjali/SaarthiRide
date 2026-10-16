@@ -5,17 +5,31 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
-
 	"SaarthiRide/internal/config"
 	"SaarthiRide/internal/models"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type UpdateProfileRequest struct {
 	Name string `json:"name" binding:"required"`
 }
 
+// UpdateProfile godoc
+// @Summary      Update user profile
+// @Description  Updates the name of the currently authenticated user.
+// @Tags         Profile
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        request body UpdateProfileRequest true "Profile update details"
+// @Success      200 {object} map[string]interface{} "Profile updated successfully"
+// @Failure      400 {object} map[string]interface{} "Name is required or cannot be empty"
+// @Failure      401 {object} map[string]interface{} "Authentication required"
+// @Failure      404 {object} map[string]interface{} "User not found"
+// @Failure      500 {object} map[string]interface{} "Database or profile update error"
+// @Router       /profile [put]
 func UpdateProfile(c *gin.Context) {
 	var req UpdateProfileRequest
 

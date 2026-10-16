@@ -24,6 +24,19 @@ type NearbyVehicleResult struct {
 	DistanceKM         float64 `json:"distance_km"`
 }
 
+// GetNearbyVehicles godoc
+// @Summary      Find nearby vehicles
+// @Description  Returns available vehicles with known coordinates within the requested radius, sorted by distance.
+// @Tags         Vehicles
+// @Produce      json
+// @Param        latitude query number true "Search latitude (-90 to 90)"
+// @Param        longitude query number true "Search longitude (-180 to 180)"
+// @Param        radius query number false "Search radius in kilometres (default 5, maximum 100)"
+// @Success      200 {object} map[string]interface{} "Nearby vehicles retrieved successfully"
+// @Failure      400 {object} map[string]interface{} "Invalid coordinates or radius"
+// @Failure      500 {object} map[string]interface{} "Could not retrieve vehicles"
+// @Router       /vehicles/nearby [get]
+
 func GetNearbyVehicles(c *gin.Context) {
 	latitude, err := strconv.ParseFloat(c.Query("latitude"), 64)
 	if err != nil || math.IsNaN(latitude) || math.IsInf(latitude, 0) ||
