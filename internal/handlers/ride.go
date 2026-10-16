@@ -189,6 +189,7 @@ func GetPendingRides(c *gin.Context) {
 
 // AcceptRide assigns an available vehicle and driver to a pending ride.
 // Both changes happen in one transaction.
+
 func AcceptRide(c *gin.Context) {
 	userIDValue, exists := c.Get("userID")
 	if !exists {
@@ -208,7 +209,14 @@ func AcceptRide(c *gin.Context) {
 		return
 	}
 
-	rideID := c.Param("id")
+	rideID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || rideID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  "error",
+			"message": "Invalid ride ID.",
+		})
+		return
+	}
 
 	db, err := config.ConnectDatabase()
 	if err != nil {
@@ -221,9 +229,17 @@ func AcceptRide(c *gin.Context) {
 
 	var driver models.User
 	if err := db.First(&driver, driverID).Error; err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"status":  "error",
+				"message": "Driver account not found.",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
-			"message": "Driver account not found.",
+			"message": "Could not retrieve driver account.",
 		})
 		return
 	}
@@ -236,19 +252,37 @@ func AcceptRide(c *gin.Context) {
 		return
 	}
 
+	// Distinguish a vehicle conflict from a ride conflict.
+	errNoAvailableVehicle := errors.New("no_available_vehicle")
+	errRideUnavailable := errors.New("ride_unavailable")
+
 	var ride models.Ride
 
 	err = db.Transaction(func(tx *gorm.DB) error {
-		// Find an available vehicle belonging to this driver.
+		// Find and lock an available vehicle belonging to this driver.
+		// Exclude vehicles assigned to accepted or ongoing rides.
 		var vehicle models.Vehicle
-		if err := tx.Where(
-			"driver_id = ? AND is_available = ?",
-			driverID, true,
-		).First(&vehicle).Error; err != nil {
+
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where(`
+				driver_id = ?
+				AND is_available = ?
+				AND NOT EXISTS (
+					SELECT 1
+					FROM rides
+					WHERE rides.vehicle_id = vehicles.id
+					AND rides.status IN (?, ?)
+				)
+			`, driverID, true, "accepted", "in_progress").
+			Order("id ASC").
+			First(&vehicle).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return errNoAvailableVehicle
+			}
 			return err
 		}
 
-		// Claim the ride only if it is still pending and unassigned.
+		// Accept the ride only if it is still pending and unassigned.
 		result := tx.Model(&models.Ride{}).
 			Where(
 				"id = ? AND status = ? AND driver_id IS NULL",
@@ -264,10 +298,10 @@ func AcceptRide(c *gin.Context) {
 			return result.Error
 		}
 		if result.RowsAffected == 0 {
-			return gorm.ErrRecordNotFound
+			return errRideUnavailable
 		}
 
-		// Mark the vehicle unavailable.
+		// Mark the vehicle unavailable only if it is still available.
 		vehicleResult := tx.Model(&models.Vehicle{}).
 			Where(
 				"id = ? AND driver_id = ? AND is_available = ?",
@@ -279,33 +313,35 @@ func AcceptRide(c *gin.Context) {
 			return vehicleResult.Error
 		}
 		if vehicleResult.RowsAffected == 0 {
-			return gorm.ErrRecordNotFound
+			return errNoAvailableVehicle
 		}
 
-		return tx.First(&ride, "id = ?", rideID).Error
+		return tx.First(&ride, rideID).Error
 	})
 
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		switch {
+		case errors.Is(err, errNoAvailableVehicle):
 			c.JSON(http.StatusConflict, gin.H{
-				"status":  "error",
-				"message": "Ride or available vehicle is no longer available.",
-			})
-			return
-		}
-
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{
 				"status":  "error",
 				"message": "No available vehicle was found for this driver.",
 			})
-			return
+		case errors.Is(err, errRideUnavailable):
+			c.JSON(http.StatusConflict, gin.H{
+				"status":  "error",
+				"message": "Ride is no longer pending or has already been assigned.",
+			})
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			c.JSON(http.StatusNotFound, gin.H{
+				"status":  "error",
+				"message": "Ride not found.",
+			})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status":  "error",
+				"message": "Could not accept ride.",
+			})
 		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"message": "Could not accept ride.",
-		})
 		return
 	}
 
