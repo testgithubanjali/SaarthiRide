@@ -51,6 +51,11 @@ func SetupRoutes() *gin.Engine {
 			middleware.AuthRequired(),
 			handlers.GetRideHistory,
 		)
+		api.PATCH(
+			"/rides/:id/cancel",
+			middleware.AuthRequired(),
+			handlers.CancelRide,
+		)
 	}
 
 	return router

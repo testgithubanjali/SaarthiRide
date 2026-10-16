@@ -601,3 +601,168 @@ func GetRideHistory(c *gin.Context) {
 		"rides":  rides,
 	})
 }
+
+func CancelRide(c *gin.Context) {
+	userIDValue, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status":  "error",
+			"message": "Authentication required.",
+		})
+		return
+	}
+
+	userID, ok := userIDValue.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status":  "error",
+			"message": "Invalid authenticated user.",
+		})
+		return
+	}
+
+	rideID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || rideID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  "error",
+			"message": "Invalid ride ID.",
+		})
+		return
+	}
+
+	db, err := config.ConnectDatabase()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  "error",
+			"message": "Could not connect to database.",
+		})
+		return
+	}
+
+	var user models.User
+	if err := db.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"status":  "error",
+			"message": "Authenticated user was not found.",
+		})
+		return
+	}
+
+	if user.Role != "passenger" && user.Role != "driver" {
+		c.JSON(http.StatusForbidden, gin.H{
+			"status":  "error",
+			"message": "Your account cannot cancel rides.",
+		})
+		return
+	}
+
+	var ride models.Ride
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		// Lock the ride to prevent conflicting status changes.
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&ride, rideID).Error; err != nil {
+			return err
+		}
+
+		switch user.Role {
+		case "passenger":
+			if ride.PassengerID != user.ID {
+				return errors.New("not_ride_owner")
+			}
+
+			if ride.Status != "pending" && ride.Status != "accepted" {
+				return errors.New("ride_not_cancellable")
+			}
+
+		case "driver":
+			if ride.DriverID == nil || *ride.DriverID != user.ID {
+				return errors.New("not_assigned_driver")
+			}
+
+			if ride.Status != "accepted" {
+				return errors.New("ride_not_cancellable")
+			}
+		}
+
+		// Release the assigned vehicle when an accepted ride
+		// is cancelled.
+		if ride.Status == "accepted" && ride.VehicleID != nil {
+			if ride.DriverID == nil {
+				return errors.New("invalid_assignment")
+			}
+
+			result := tx.Model(&models.Vehicle{}).
+				Where(
+					"id = ? AND driver_id = ?",
+					*ride.VehicleID,
+					*ride.DriverID,
+				).
+				Update("is_available", true)
+
+			if result.Error != nil {
+				return result.Error
+			}
+
+			if result.RowsAffected == 0 {
+				return errors.New("assigned_vehicle_not_found")
+			}
+		}
+
+		// Cancel only if the status still matches.
+		result := tx.Model(&models.Ride{}).
+			Where("id = ? AND status = ?", ride.ID, ride.Status).
+			Update("status", "cancelled")
+
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return errors.New("ride_status_changed")
+		}
+
+		return tx.First(&ride, ride.ID).Error
+	})
+
+	if err != nil {
+		switch {
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			c.JSON(http.StatusNotFound, gin.H{
+				"status":  "error",
+				"message": "Ride not found.",
+			})
+		case err.Error() == "not_ride_owner":
+			c.JSON(http.StatusForbidden, gin.H{
+				"status":  "error",
+				"message": "You can only cancel your own rides.",
+			})
+		case err.Error() == "not_assigned_driver":
+			c.JSON(http.StatusForbidden, gin.H{
+				"status":  "error",
+				"message": "You are not assigned to this ride.",
+			})
+		case err.Error() == "ride_not_cancellable":
+			c.JSON(http.StatusConflict, gin.H{
+				"status":  "error",
+				"message": "This ride can no longer be cancelled.",
+			})
+		case err.Error() == "ride_status_changed":
+			c.JSON(http.StatusConflict, gin.H{
+				"status":  "error",
+				"message": "Ride status changed. Please try again.",
+			})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status":  "error",
+				"message": "Could not cancel ride. Changes were rolled back.",
+			})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Ride cancelled successfully!",
+		"ride":    ride,
+	})
+}
