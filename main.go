@@ -29,6 +29,7 @@ func main() {
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.Vehicle{},
+		&models.Ride{},
 	); err != nil {
 		log.Fatal("Database migration failed: ", err)
 	}
